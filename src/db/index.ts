@@ -14,7 +14,7 @@ interface UserDocument extends Document {
   // signup_key: number;
   password: string;
   phone_no: number;
-  club_id: mongoose.Types.ObjectId[];
+  hostel_id: mongoose.Types.ObjectId;
   role: string;
   college_id: mongoose.Types.ObjectId;
 }
@@ -30,7 +30,7 @@ const userSchema = new Schema<UserDocument, UserModel>({
   // signup_key: { type: Number, required: true },
   password: String,
   phone_no: Number,
-  club_id: [{ type: mongoose.Schema.Types.ObjectId, ref: "clubs" }],
+  hostel_id: { type: mongoose.Schema.Types.ObjectId, ref: "clubs" },
   role: {
     type: String,
     enum: [roles.collegeadmin, roles.hostelwarden, roles.hostelOccupant],
@@ -40,16 +40,16 @@ const userSchema = new Schema<UserDocument, UserModel>({
 });
 
 // Club Schema
-interface ClubDocument extends Document {
-  club_name: string;
+interface HostelDocument extends Document {
+  hostel_name: string;
   college_id: mongoose.Types.ObjectId;
   description?: string;
 }
 
-interface ClubModel extends Model<ClubDocument> {}
+interface ClubModel extends Model<HostelDocument> {}
 
-const clubsSchema = new Schema<ClubDocument, ClubModel>({
-  club_name: String,
+const HostelSchema = new Schema<HostelDocument, ClubModel>({
+  hostel_name: String,
   college_id: { type: mongoose.Schema.Types.ObjectId, ref: "college_info" },
   description: { type: String, max: 500 },
 });
@@ -85,9 +85,9 @@ export const User = mongoose.model<UserDocument, UserModel>(
   "users",
   userSchema
 );
-export const Club = mongoose.model<ClubDocument, ClubModel>(
+export const Club = mongoose.model<HostelDocument, ClubModel>(
   "clubs",
-  clubsSchema
+  HostelSchema
 );
 export const College = mongoose.model<CollegeDocument, CollegeModel>(
   "college_info",
