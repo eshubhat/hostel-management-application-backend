@@ -1,0 +1,1 @@
+Use "npm start" in terminal to start nodemon
