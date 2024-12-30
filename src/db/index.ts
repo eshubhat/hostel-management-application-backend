@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
 import express from "express";
 import bcrypt from "bcrypt";
 import { roles } from "../utils/constants";
@@ -8,70 +8,154 @@ app.use(express.json());
 
 // Define interface for User document
 interface UserDocument extends Document {
-  first_name: string;
-  last_name: string;
+  name: string;
   email: string;
-  // signup_key: number;
-  password: string;
-  phone_no: number;
-  hostel_id: mongoose.Types.ObjectId;
-  role: string;
-  college_id: mongoose.Types.ObjectId;
+  password?: string;
+  role: "superAdmin" | "warden" | "representative" | "student";
+  gender: "male" | "female";
+  registrationNumber?: string;
+  hostel?: Types.ObjectId;
+  roomNumber?: string;
+  temporaryKey?: string;
+  isProfileComplete: boolean;
 }
 
-// Define interface for UserModel
 interface UserModel extends Model<UserDocument> {}
 
-// User Schema
 const userSchema = new Schema<UserDocument, UserModel>({
-  first_name: String,
-  last_name: String,
-  email: { type: String, lowercase: true },
-  // signup_key: { type: Number, required: true },
-  password: String,
-  phone_no: Number,
-  hostel_id: { type: mongoose.Schema.Types.ObjectId, ref: "clubs" },
+  name: { type: String },
+  email: { type: String, required: true, unique: true },
+  password: { type: String },
   role: {
     type: String,
-    enum: [roles.collegeadmin, roles.hostelwarden, roles.hostelOccupant],
-    default: roles.hostelOccupant,
+    enum: ["superAdmin", "warden", "representative", "student"],
+    required: true,
   },
-  college_id: { type: mongoose.Schema.Types.ObjectId, ref: "college_info" },
+  gender: { type: String, enum: ["male", "female"], required: true },
+  registrationNumber: { type: String, unique: true },
+  hostel: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel" },
+  roomNumber: { type: String },
+  temporaryKey: { type: String },
+  isProfileComplete: { type: Boolean, default: false },
 });
 
-// Club Schema
+// Hostel Schema
 interface HostelDocument extends Document {
-  hostel_name: string;
-  college_id: mongoose.Types.ObjectId;
-  description?: string;
+  name: string;
+  gender: "male" | "female";
+  rooms: {
+    roomNumber: string;
+    capacity: number;
+    occupants: Types.ObjectId[];
+  }[];
+  college: Types.ObjectId;
 }
 
-interface ClubModel extends Model<HostelDocument> {}
+interface HostelModel extends Model<HostelDocument> {}
 
-const HostelSchema = new Schema<HostelDocument, ClubModel>({
-  hostel_name: String,
-  college_id: { type: mongoose.Schema.Types.ObjectId, ref: "college_info" },
-  description: { type: String, max: 500 },
+const hostelSchema = new Schema<HostelDocument, HostelModel>({
+  name: { type: String, required: true },
+  gender: { type: String, enum: ["male", "female"], required: true },
+  rooms: [
+    {
+      roomNumber: { type: String, required: true },
+      capacity: { type: Number, required: true },
+      occupants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    },
+  ],
+  college: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "College",
+    required: true,
+  },
 });
 
 // College Schema
 interface CollegeDocument extends Document {
-  college_name: string;
-  college_email: string;
+  name: string;
+  address: string;
+  hostels: Types.ObjectId[];
 }
 
 interface CollegeModel extends Model<CollegeDocument> {}
 
 const collegeSchema = new Schema<CollegeDocument, CollegeModel>({
-  college_name: String,
-  college_email: String,
+  name: { type: String, required: true, unique: true },
+  address: { type: String, required: true },
+  hostels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hostel" }],
+});
+
+//Absentee schema
+interface AbsenteeDocument extends Document {
+  date: Date;
+  student: {
+    name: string;
+    registrationNumber: string;
+    roomNumber: string;
+  };
+  hostel: Types.ObjectId;
+}
+
+interface AbsenteeModel extends Model<AbsenteeDocument> {}
+
+const absenteeSchema = new Schema<AbsenteeDocument, AbsenteeModel>({
+  date: { type: Date, required: true },
+  student: {
+    name: { type: String, required: true },
+    registrationNumber: { type: String, required: true },
+    roomNumber: { type: String, required: true },
+  },
+  hostel: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Hostel",
+    required: true,
+  },
+});
+
+//Issue Schema
+interface IssueDocument extends Document {
+  student: {
+    name: string;
+    registrationNumber: string;
+    roomNumber?: string;
+  };
+  floorNumber?: number;
+  tag: "carpenter" | "plumber" | "electrician" | "cleaning" | "other";
+  description: string;
+  status: "open" | "in-progress" | "resolved";
+  createdAt: Date;
+  hostel: Types.ObjectId;
+}
+
+interface IssueModel extends Model<IssueDocument> {}
+
+const issueSchema = new Schema<IssueDocument, IssueModel>({
+  student: {
+    name: { type: String, required: true },
+    registrationNumber: { type: String, required: true },
+    roomNumber: { type: String },
+  },
+  floorNumber: { type: Number },
+  tag: {
+    type: String,
+    enum: ["carpenter", "plumber", "electrician", "cleaning", "other"],
+    required: true,
+  },
+  description: { type: String, required: true },
+  status: {
+    type: String,
+    enum: ["open", "in-progress", "resolved"],
+    default: "open",
+  },
+  createdAt: { type: Date, default: Date.now },
+  hostel: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel" },
 });
 
 // Pre-save hook for hashing password
 userSchema.pre<UserDocument>("save", async function (next) {
   try {
     if (this.isNew || this.isModified("password")) {
-      const hashedPassword = await bcrypt.hash(this.password, 10);
+      const hashedPassword = await bcrypt.hash(this.password as string, 10);
       this.password = hashedPassword;
     }
     next();
@@ -85,11 +169,19 @@ export const User = mongoose.model<UserDocument, UserModel>(
   "users",
   userSchema
 );
-export const Club = mongoose.model<HostelDocument, ClubModel>(
-  "clubs",
-  HostelSchema
+export const Hostel = mongoose.model<HostelDocument, HostelModel>(
+  "Hostel",
+  hostelSchema
 );
 export const College = mongoose.model<CollegeDocument, CollegeModel>(
   "college_info",
   collegeSchema
+);
+export const Absentee = mongoose.model<AbsenteeDocument, AbsenteeModel>(
+  "Absentee",
+  absenteeSchema
+);
+export const Issue = mongoose.model<IssueDocument, IssueModel>(
+  "Issue",
+  issueSchema
 );
