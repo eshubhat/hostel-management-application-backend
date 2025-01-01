@@ -1,6 +1,13 @@
 export const roles = {
-  superadmin: "SUPERADMIN",
-  collegeadmin: "COLLEGEADMIN",
-  hostelwarden: "HOSTELWARDEN",
-  hostelOccupant: "HOSTELOCCUPANT",
+  superadmin: "superadmin",
+  reperesentative: "representative",
+  warden: "warden",
+  hostelOccupant: "student",
+};
+
+export const roomSharingTypes = {
+  single: "single",
+  double: "double",
+  triple: "triple",
+  bunker: "bunker",
 };

@@ -17,6 +17,7 @@ interface UserDocument extends Document {
   hostel?: Types.ObjectId;
   roomNumber?: string;
   temporaryKey?: string;
+  isFirstLogin: boolean;
   isProfileComplete: boolean;
 }
 
@@ -28,7 +29,8 @@ const userSchema = new Schema<UserDocument, UserModel>({
   password: { type: String },
   role: {
     type: String,
-    enum: ["superAdmin", "warden", "representative", "student"],
+    enum: ["superadmin", "warden", "representative", "student"],
+    default: "representative",
     required: true,
   },
   gender: { type: String, enum: ["male", "female"], required: true },
@@ -36,6 +38,7 @@ const userSchema = new Schema<UserDocument, UserModel>({
   hostel: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel" },
   roomNumber: { type: String },
   temporaryKey: { type: String },
+  isFirstLogin: { type: Boolean, default: true, required: true },
   isProfileComplete: { type: Boolean, default: false },
 });
 
@@ -45,8 +48,8 @@ interface HostelDocument extends Document {
   gender: "male" | "female";
   rooms: {
     roomNumber: string;
-    capacity: number;
     occupants: Types.ObjectId[];
+    sharing: "single" | "double" | "triple" | "bunker";
   }[];
   college: Types.ObjectId;
 }
@@ -59,7 +62,7 @@ const hostelSchema = new Schema<HostelDocument, HostelModel>({
   rooms: [
     {
       roomNumber: { type: String, required: true },
-      capacity: { type: Number, required: true },
+      sharing: { type: String, enum: ["single", "double", "triple", "bunker"], required: true },
       occupants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     },
   ],
@@ -75,6 +78,7 @@ interface CollegeDocument extends Document {
   name: string;
   address: string;
   hostels: Types.ObjectId[];
+  representative: Types.ObjectId;
 }
 
 interface CollegeModel extends Model<CollegeDocument> {}
@@ -83,6 +87,7 @@ const collegeSchema = new Schema<CollegeDocument, CollegeModel>({
   name: { type: String, required: true, unique: true },
   address: { type: String, required: true },
   hostels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hostel" }],
+  representative: {type: mongoose.Schema.Types.ObjectId, ref: "User"}
 });
 
 //Absentee schema
@@ -165,16 +170,13 @@ userSchema.pre<UserDocument>("save", async function (next) {
 });
 
 // Export models
-export const User = mongoose.model<UserDocument, UserModel>(
-  "users",
-  userSchema
-);
+export const User = mongoose.model<UserDocument, UserModel>("User", userSchema);
 export const Hostel = mongoose.model<HostelDocument, HostelModel>(
   "Hostel",
   hostelSchema
 );
 export const College = mongoose.model<CollegeDocument, CollegeModel>(
-  "college_info",
+  "College",
   collegeSchema
 );
 export const Absentee = mongoose.model<AbsenteeDocument, AbsenteeModel>(
