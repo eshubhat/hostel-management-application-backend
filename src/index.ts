@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
 import authenticationRoute from "./routes/authentication.routes.js";
-import collegeAdminRouter from "./routes/collegeadmin.routes.js";
+import representativeRoute from "./routes/representative.routes.js";
 import superAdminRoute from "./routes/superadmin.routes.js";
 import userRoute from "./routes/users.js";
 
@@ -18,7 +18,7 @@ app.use(cookieParser());
 
 app.use("/auth", authenticationRoute);
 app.use("/superadmin", superAdminRoute);
-app.use("/collegeadmin", collegeAdminRouter);
+app.use("/collegeadmin", representativeRoute);
 app.use("/user", userRoute);
 
 mongoose.connect(process.env.MONGODB_URI as string, {
