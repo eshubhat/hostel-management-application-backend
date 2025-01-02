@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import nodemailer from "nodemailer";
 import { config } from "dotenv";
 import crypto from "crypto"; // For generating random passwords
+import { roles } from "../utils/constants.js";
 
 const app = express();
 
@@ -34,7 +35,7 @@ const sendEmail = async (email: string, subject: string, text: string) => {
 // SuperAdmin registers a representative
 export const registerRepresentative = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
+    const { email, collegeId } = req.body;
 
     if (!email) {
       return res.status(403).json({ message: "Email is required" });
@@ -54,6 +55,7 @@ export const registerRepresentative = async (req: Request, res: Response) => {
       password: hashedPassword,
       role: "representative",
       isFirstLogin: true, // Mark as first login
+      college: collegeId,
     });
 
     await representative.save();
@@ -69,7 +71,9 @@ export const registerRepresentative = async (req: Request, res: Response) => {
 
     await sendEmail(email, "Your Temporary Password", emailText);
 
-    return res.status(201).json({ message: "Representative registered successfully" });
+    return res
+      .status(201)
+      .json({ message: "Representative registered successfully" });
   } catch (error) {
     return res.status(500).json({ error });
   }
@@ -94,7 +98,8 @@ export const firstTimeLogin = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Not a first-time login" });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    // user.password = await bcrypt.hash(newPassword, 10);
+    user.password = newPassword;
     user.isFirstLogin = false; // Reset the first login flag
     await user.save();
 
@@ -107,7 +112,7 @@ export const firstTimeLogin = async (req: Request, res: Response) => {
 // Representative registers warden or student
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { email, role } = req.body;
+    const { email, role, collegeId } = req.body;
 
     if (!email || !["warden", "student"].includes(role)) {
       return res.status(403).json({ message: "Invalid input" });
@@ -127,6 +132,7 @@ export const registerUser = async (req: Request, res: Response) => {
       password: hashedPassword,
       role,
       isFirstLogin: true,
+      college: collegeId,
     });
 
     await newUser.save();
@@ -152,9 +158,32 @@ export const registerUser = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    console.log(email, password);
 
     if (!email || !password) {
-      return res.status(403).json({ message: "Email and password are required" });
+      return res
+        .status(403)
+        .json({ message: "Email and password are required" });
+    }
+
+    if (
+      email === process.env.SUPERADMIN_EMAIL &&
+      password === process.env.SUPERADMIN_PASSWORD
+    ) {
+      const token = jwt.sign(
+        { email, role: roles.superadmin },
+        process.env.JWT_TOKEN_KEY as string,
+        { expiresIn: "1d" }
+      );
+
+      return res
+        .cookie("jwt", token, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "lax",
+          maxAge: 24 * 60 * 60 * 1000,
+        })
+        .json({ message: "Login successful", token });
     }
 
     const user = await User.findOne({ email });
@@ -164,11 +193,13 @@ export const login = async (req: Request, res: Response) => {
     }
 
     if (user.isFirstLogin) {
-      return res.status(403).json({ message: "Please change your password first" });
+      return res
+        .status(403)
+        .json({ message: "Please change your password first" });
     }
 
     const token = jwt.sign(
-      { email, role: user.role },
+      { email, user, role: user.role, collegeId: user?.college },
       process.env.JWT_TOKEN_KEY as string,
       { expiresIn: "1d" }
     );
@@ -187,26 +218,26 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-    try {
-      const { ID, token } = req.params;
-      const { password } = req.body;
-  
-      const user = await User.findById(ID);
-  
-      if (user) {
-        user.password = password;
-        await user.save();
-  
-        return res.status(200).json({ message: "password changed" });
-      } else {
-        return res.status(404).json({ message: "User not found" });
-      }
-    } catch (error) {
-      return res.status(500).json({ error });
-    }
-  };
+  try {
+    const { ID, token } = req.params;
+    const { password } = req.body;
 
-  export const logout = (req: Request, res: Response) => {
+    const user = await User.findById(ID);
+
+    if (user) {
+      user.password = password;
+      await user.save();
+
+      return res.status(200).json({ message: "password changed" });
+    } else {
+      return res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    return res.status(500).json({ error });
+  }
+};
+
+export const logout = (req: Request, res: Response) => {
   res
     .clearCookie("jwt", {
       httpOnly: true,

@@ -1,7 +1,16 @@
-import express from "express";
-const router = express.Router();
-import { representativeAuth } from "../middleware/authorization.js";
-import createUser from "../controllers/superadmin.controller.js";
+import express, { Request, Response } from "express";
+import {
+  studentRegistration,
+  registerHostel,
+  fetchHostels,
+} from "../controllers/representative.controller";
+import { representativeAuth } from "../middleware/authorization";
 
-router.get("/createuser", representativeAuth, createUser);
+const router = express.Router();
+router.post("/studentRegistration", representativeAuth, studentRegistration);
+
+router.post("/registerHostel", representativeAuth, registerHostel);
+
+router.get("/fetch-hostels", representativeAuth, fetchHostels);
+
 export default router;

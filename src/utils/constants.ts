@@ -1,6 +1,6 @@
 export const roles = {
   superadmin: "superadmin",
-  reperesentative: "representative",
+  representative: "representative",
   warden: "warden",
   hostelOccupant: "student",
 };
