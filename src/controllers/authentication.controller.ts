@@ -38,13 +38,13 @@ export const registerRepresentative = async (req: Request, res: Response) => {
     const { email, collegeId } = req.body;
 
     if (!email) {
-      return res.status(403).json({ message: "Email is required" });
+      return res.sendStatus(403).json({ message: "Email is required" });
     }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(401).json({ message: "User already registered" });
+      return res.sendStatus(401).json({ message: "User already registered" });
     }
 
     const tempPassword = crypto.randomBytes(3).toString("hex"); // Generate 5-digit random password
@@ -72,25 +72,27 @@ export const registerRepresentative = async (req: Request, res: Response) => {
     await sendEmail(email, "Your Temporary Password", emailText);
 
     return res
-      .status(201)
+      .sendStatus(201)
       .json({ message: "Representative registered successfully" });
   } catch (error) {
-    return res.status(500).json({ error });
+    return res.sendStatus(500).json({ error });
   }
 };
 
 // First-time login handler
 export const firstTimeLogin = async (req: Request, res: Response) => {
   try {
-    const { email, password, newPassword } = req.body;
+    const { newPassword } = req.body;
+    const { email } = req.user;
+    console.log(email, newPassword);
 
-    if (!email || !password || !newPassword) {
+    if (!newPassword) {
       return res.status(403).json({ message: "All fields are required" });
     }
 
     const user = await User.findOne({ email });
 
-    if (!user || !(await bcrypt.compare(password, user.password as string))) {
+    if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -115,13 +117,13 @@ export const registerUser = async (req: Request, res: Response) => {
     const { email, role, collegeId } = req.body;
 
     if (!email || !["warden", "student"].includes(role)) {
-      return res.status(403).json({ message: "Invalid input" });
+      return res.sendStatus(403).json({ message: "Invalid input" });
     }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(401).json({ message: "User already registered" });
+      return res.sendStatus(401).json({ message: "User already registered" });
     }
 
     const tempPassword = crypto.randomBytes(3).toString("hex");
@@ -148,9 +150,11 @@ export const registerUser = async (req: Request, res: Response) => {
 
     await sendEmail(email, "Your Temporary Password", emailText);
 
-    return res.status(201).json({ message: `${role} registered successfully` });
+    return res
+      .sendStatus(201)
+      .json({ message: `${role} registered successfully` });
   } catch (error) {
-    return res.status(500).json({ error });
+    return res.sendStatus(500).json({ error });
   }
 };
 
@@ -158,11 +162,13 @@ export const registerUser = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    let isFirstLogin = false;
     console.log(email, password);
 
     if (!email || !password) {
+      console.log("Email and password are required");
       return res
-        .status(403)
+        .status(401)
         .json({ message: "Email and password are required" });
     }
 
@@ -193,9 +199,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     if (user.isFirstLogin) {
-      return res
-        .status(403)
-        .json({ message: "Please change your password first" });
+      isFirstLogin = true;
     }
 
     const token = jwt.sign(
@@ -211,7 +215,7 @@ export const login = async (req: Request, res: Response) => {
         sameSite: "lax",
         maxAge: 24 * 60 * 60 * 1000,
       })
-      .json({ message: "Login successful", token });
+      .json({ message: "Login successful", token, isFirstLogin });
   } catch (error) {
     return res.status(500).json({ error });
   }
@@ -228,12 +232,12 @@ export const resetPassword = async (req: Request, res: Response) => {
       user.password = password;
       await user.save();
 
-      return res.status(200).json({ message: "password changed" });
+      return res.sendStatus(200).json({ message: "password changed" });
     } else {
-      return res.status(404).json({ message: "User not found" });
+      return res.sendStatus(404).json({ message: "User not found" });
     }
   } catch (error) {
-    return res.status(500).json({ error });
+    return res.sendStatus(500).json({ error });
   }
 };
 
@@ -253,7 +257,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Email not found!" });
+      return res.sendStatus(401).json({ message: "Email not found!" });
     }
 
     const token = jwt.sign({ email }, process.env.JWT_TOKEN_KEY as string, {
@@ -294,12 +298,12 @@ export const forgotPassword = async (req: Request, res: Response) => {
       if (err) {
         res.json(err);
       } else {
-        return res.status(200).json({ message: "Email sent successfully" });
+        return res.sendStatus(200).json({ message: "Email sent successfully" });
       }
     });
   } catch (error) {
     return res
-      .status(500)
+      .sendStatus(500)
       .json({ message: "Something went wrong, Please try again" });
   }
 };

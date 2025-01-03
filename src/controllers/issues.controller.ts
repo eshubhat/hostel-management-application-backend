@@ -48,7 +48,7 @@ const getEmptyRooms = async () => {
         },
       ],
       isAvailable: true, // Ensure the room is marked as available
-      status: "available", // Ensure the status is 'available'
+      sendStatus: "available", // Ensure the sendStatus is 'available'
     })
       .populate("hostel")
       .populate("college")
@@ -78,13 +78,13 @@ export const CreateIssue = async (req: Request, res: Response) => {
       !description ||
       !hostelId
     ) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.sendStatus(400).json({ message: "All fields are required" });
     }
 
     // Validate user existence
     const user = await User.findOne({ email: req.user.email }); // Assuming req.user._id contains the user's ID
     if (!user) {
-      return res.status(403).json({ message: "User not eligible" });
+      return res.sendStatus(403).json({ message: "User not eligible" });
     }
 
     // Create issue
@@ -105,11 +105,11 @@ export const CreateIssue = async (req: Request, res: Response) => {
 
     // Respond with success
     return res
-      .status(201)
+      .sendStatus(201)
       .json({ message: "Issue created successfully", issue });
   } catch (error) {
     console.error("Error creating issue:", error);
-    return res.status(500).json({ message: "Server error", error });
+    return res.sendStatus(500).json({ message: "Server error", error });
   }
 };
 
@@ -122,7 +122,7 @@ export const fetchIssues = async (req: Request, res: Response) => {
     }).populate("hostel");
     console.log("issues", issues);
     if (role === "warden") {
-      return res.status(200).json(issues);
+      return res.sendStatus(200).json(issues);
     } else if (role === "student") {
       const issues = await Issue.find().populate("hostel");
       const filteredIssues = issues.filter((issue: any) => {
@@ -130,10 +130,10 @@ export const fetchIssues = async (req: Request, res: Response) => {
           issue.student.registrationNumber === req.user.user.registrationNumber
         );
       });
-      return res.status(200).json(filteredIssues);
+      return res.sendStatus(200).json(filteredIssues);
     } else {
       return res
-        .status(403)
+        .sendStatus(403)
         .json({ message: "You are not authorized to view this page" });
     }
   } catch (error) {}

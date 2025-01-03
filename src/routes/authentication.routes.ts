@@ -11,6 +11,7 @@ import {
 import {
   representativeAuth,
   superadminAuth,
+  authenticateJwt,
 } from "../middleware/authorization.js";
 
 const router = express.Router();
@@ -23,7 +24,7 @@ router.post(
   registerRepresentative
 );
 
-router.post("/first-time-login", firstTimeLogin);
+router.post("/first-time-login", authenticateJwt, firstTimeLogin);
 
 router.post("/login", login);
 

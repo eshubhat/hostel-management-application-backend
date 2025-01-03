@@ -8,13 +8,13 @@ const createUser = async (req: Request, res: Response) => {
     const user = await User.findOne({ email });
 
     if (user) {
-        return res.send(403).json({ message: "User Already exist" });
+        return res.sendStatus(403).json({ message: "User Already exist" });
     }
     const password = generatePassword();
     console.log(password);
     const newUser = new User({ email, password, role: roles.hostelOccupant });
     newUser.save();
-    res.status(201).json({ message: "User created successfully" });
+    res.sendStatus(201).json({ message: "User created successfully" });
 }
 
 export default createUser;

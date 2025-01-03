@@ -7,7 +7,7 @@ import bodyParser from "body-parser";
 import authenticationRoute from "./routes/authentication.routes.js";
 import representativeRoute from "./routes/representative.routes.js";
 import superAdminRoute from "./routes/superadmin.routes.js";
-import userRoute from "./routes/users.js";
+import userRoute from "./routes/users.routes.js";
 import issueRoute from "./routes/issues.routes.js";
 
 dotenv.config();
@@ -15,7 +15,12 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.json());
 
-app.use(cors({ credentials: true, origin: "*" }));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 

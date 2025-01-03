@@ -21,10 +21,12 @@ export const authenticateJwt = async (
         process.env.JWT_TOKEN_KEY as string,
         (err: VerifyErrors | null, user: any) => {
           if (err) {
+            console.log(err);
             return res
               .status(403)
               .json({ message: "Token has expired!/not valid token" });
           }
+          req.user = user;
           next();
         }
       );
@@ -42,7 +44,9 @@ export const superadminAuth: RequestHandler = (
   next: NextFunction
 ) => {
   const token = req.cookies?.jwt;
-
+  // const token = req.headers.authorization;
+  // console.log(token);
+  console.log(req.cookies);
   if (!token) {
     return res.sendStatus(401); // Unauthorized
   }
@@ -52,6 +56,7 @@ export const superadminAuth: RequestHandler = (
     process.env.JWT_TOKEN_KEY as string,
     (err: VerifyErrors | null, user: any) => {
       if (err) {
+        console.log("hi");
         return res.sendStatus(403); // Forbidden
       }
 
@@ -59,7 +64,7 @@ export const superadminAuth: RequestHandler = (
         req.user = user; // Add `user` to the request object
         return next(); // Move to the next middleware
       } else {
-        return res.status(401).json({ message: "Unauthorized", user });
+        return res.sendStatus(401).json({ message: "Unauthorized", user });
       }
     }
   );
@@ -71,9 +76,8 @@ export const representativeAuth = (
   next: NextFunction
 ) => {
   const cookies = req.cookies;
-  console.log(cookies);
   if (!cookies?.jwt) {
-    res.sendStatus(401);
+    res.status(401);
   } else {
     const token = cookies.jwt;
     jwt.verify(
@@ -81,7 +85,7 @@ export const representativeAuth = (
       process.env.JWT_TOKEN_KEY as string,
       (err: VerifyErrors | null, user: any) => {
         if (err) {
-          return res.sendStatus(403);
+          return res.status(403);
         }
         if (user.role == roles.representative) {
           req.user = user;
@@ -111,7 +115,7 @@ export const wardenAuth = (req: Request, res: Response, next: NextFunction) => {
         if (user.role == roles.warden) {
           next();
         } else {
-          return res.status(401).json({ message: "Unauthorised" });
+          return res.sendStatus(401).json({ message: "Unauthorised" });
         }
       }
     );

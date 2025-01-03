@@ -244,20 +244,21 @@ const findAvailableRoom = async (
 
 export const registerHostel = async (req: Request, res: Response) => {
   try {
-    const { hostelName, hostelType, totalFloor, wardenEmail, sharingTypes } =
+    const { hostelName, hostelType, totalFloors, wardenEmail, sharingTypes } =
       req.body;
 
+    console.log("hostelName", req.body);
     // Extract college from the decoded token
     const collegeId = req.user.collegeId;
-    console.log("collegeId", req.user);
 
     // Validate inputs
     if (
       !hostelName ||
       !hostelType ||
-      !totalFloor ||
+      !totalFloors ||
       !wardenEmail ||
-      !collegeId
+      !collegeId ||
+      !sharingTypes
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -278,14 +279,13 @@ export const registerHostel = async (req: Request, res: Response) => {
     if (!warden) {
       // Generate a random 5-digit password for the new warden
       const tempPassword = Math.random().toString().slice(2, 7);
-      const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
       // Create a new warden
       warden = new User({
         email: wardenEmail,
         role: "warden",
         college: collegeId,
-        password: hashedPassword,
+        password: tempPassword,
       });
 
       // Send email to the new warden
@@ -314,6 +314,7 @@ export const registerHostel = async (req: Request, res: Response) => {
 
       await warden.save();
     } else if (warden.role !== "warden") {
+      console.log("collegeId", collegeId);
       return res
         .status(400)
         .json({ message: "The user must have the role of 'warden'." });
@@ -323,7 +324,7 @@ export const registerHostel = async (req: Request, res: Response) => {
     const hostel = new Hostel({
       name: hostelName,
       gender: hostelType,
-      totalFloor,
+      totalFloor: totalFloors,
       rooms: [],
       college: collegeId,
     });
@@ -336,10 +337,10 @@ export const registerHostel = async (req: Request, res: Response) => {
       const { type, value } = sharingType;
 
       if (value > 0) {
-        const roomsPerFloor = Math.floor(value / totalFloor);
-        const remainingRooms = value % totalFloor;
+        const roomsPerFloor = Math.floor(value / totalFloors);
+        const remainingRooms = value % totalFloors;
 
-        for (let floor = 1; floor <= totalFloor; floor++) {
+        for (let floor = 1; floor <= totalFloors; floor++) {
           const numRoomsOnFloor =
             roomsPerFloor + (floor <= remainingRooms ? 1 : 0);
 
@@ -365,6 +366,9 @@ export const registerHostel = async (req: Request, res: Response) => {
     // Update hostel with room references
     hostel.rooms = savedRooms.map((room) => room._id as Types.ObjectId);
     await hostel.save();
+    if (!college.hostels) college.hostels = [];
+    college.hostels.push(hostel._id as Types.ObjectId);
+    college.save();
 
     return res
       .status(201)

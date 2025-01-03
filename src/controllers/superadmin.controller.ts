@@ -33,10 +33,11 @@ const sendEmail = async (email: string, subject: string, html: string) => {
 
 export const createRepresentative = async (req: Request, res: Response) => {
   const { email, name } = req.body;
+  console.log(email);
   const user = await User.findOne({ email });
 
   if (user) {
-    return res.send(403).json({ message: "User Already exist" });
+    return res.send(401).json({ message: "User Already exist" });
   }
   const password = generatePassword();
   console.log(password);
@@ -48,22 +49,25 @@ export const createRepresentative = async (req: Request, res: Response) => {
     registrationNumber: new mongoose.Types.ObjectId(),
   });
   await newUser.save();
-  return res.status(201).json({ message: "User created successfully" });
+  return res.sendStatus(201).json({ message: "User created successfully" });
 };
 //how to delete a user
 
 export const createCollege = async (req: Request, res: Response) => {
   const { collegeName, representativeEmail } = req.body;
+  console.log(collegeName, representativeEmail);
   const college = await College.findOne({ name: collegeName });
 
   if (college) {
-    return res.send(403).json({ message: "User Already exist" });
+    return res.status(403).json({ message: "College Already exist" });
   }
 
   let user = await User.findOne({ email: representativeEmail });
   let tempPassword = "";
   if (!user) {
+    console.log("User not found");
     tempPassword = crypto.randomBytes(3).toString("hex");
+    console.log(tempPassword);
     const newUser = new User({
       email: representativeEmail,
       role: roles.representative,
